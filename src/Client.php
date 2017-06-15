@@ -460,7 +460,7 @@ class Client
 
         if ($poll->getByInvitation() == False) {
             // Only byInvitation polls are allowed to send auto reminders.
-            throw new \Exception(sprintf('This is a public poll. Set the poll to invitation only to create automatic reminders.', 1488287858));
+            throw new \Exception(sprintf('This is a public poll. Set the poll to invitation only to create automatic reminders.', 1486887877));
         }
 
         if (empty($poll->getAdminKey())) {

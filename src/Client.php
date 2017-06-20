@@ -203,6 +203,7 @@ class Client
 
     /**
      * Disconnects from Doodle.
+     *     Deletes the temporary file at the location $this->getCookieFileName()
      *
      * @return bool Returns true if disconnect succeeded, otherwise false
      */
@@ -351,6 +352,8 @@ class Client
             'country' => 'CH',
             'locale' => $this->locale,
             'token' => $this->token,
+            'invitees' => [],
+            'personalMessage' => ''
         );
 
         // Optional parameters
@@ -375,6 +378,17 @@ class Client
         }
         if (isset($info['country'])) {
             $data['country'] = $info['country'];
+        }
+        if (isset($info['byInvitation'])) {
+            $data['byInvitation'] = (bool)$info['byInvitation'] ? 'true' : 'false';
+        }
+        if (isset($info['invitees'])) {
+            foreach ($info['invitees'] as $invitee) {
+                $data['invitees'][] = trim($invitee);
+            }
+        }
+        if (isset($info['personalMessage'])) {
+            $data['personalMessage'] = $info['personalMessage'];
         }
 
         if ($type === Poll::TYPE_TEXT) {
@@ -430,6 +444,39 @@ class Client
         );
         $response = $this->doPost('/np/new-polls/' . $poll->getId() . '/delete', $data);
     }
+
+    /**
+     * Requests Doodle to send automatic reminders on the specified $reminder dates.
+     *
+     * @param Poll $poll
+     *   The poll object we are setting the reminders for.
+     * @param array(strings) $reminderDates
+     *   The array of UNIX timestamps in milliseconds. Each time stamp signifies the time doodle should send reminders to participants that have not participated in the poll.
+     *
+     * @return void
+     * @throws \Exception
+     */
+    public function sendReminders(Poll $poll, array $reminderDates) {
+
+        if ($poll->getByInvitation() == False) {
+            // Only byInvitation polls are allowed to send auto reminders.
+            throw new \Exception(sprintf('This is a public poll. Set the poll to invitation only to create automatic reminders.', 1486887877));
+        }
+
+        if (empty($poll->getAdminKey())) {
+            // If no admin key is set, we cannot properly connect to doodle.
+            throw new \Exception(sprintf('Admin key not available. Participants %s cannot be invited.', implode(', ', $emailAddresses)), 1488287858);
+        }
+
+        $data = array(
+            'token' => $this->token,
+            'adminKey' => $poll->getAdminKey(),
+            'pollId' => $poll->getId(),
+            'reminders' => $reminderDates,
+        );
+
+        $this->doPost('/np/new-polls/' . $poll->getId() . '/reminders', $data);
+      }
 
     /**
      * Invites new participants.
